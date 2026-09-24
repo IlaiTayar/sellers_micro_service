@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  db:
+    container_name: "seller_db"
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=main
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./resources/db-migrations:/docker-entrypoint-initdb.d/
+    command: --default-authentication-plugin=mysql_native_password
+
+
+  redis:
+      container_name: "seller_redis"
+      image: redis:latest
+      ports:
+        - "6380:6379"
