@@ -59,7 +59,6 @@ async def get_item_by_id(item_id: int) -> Optional[Item]:
 
         if str_item:
             item = _to_item(json.loads(str_item))
-            # Refresh the TTL on a cache hit.
             cache_repository.remove_cache_entity(str(item_id))
             cache_repository.create_cache_entity(str(item_id), item.model_dump_json())
             return item
