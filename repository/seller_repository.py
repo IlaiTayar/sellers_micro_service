@@ -25,7 +25,7 @@ async def create_seller(seller: Seller) -> int:
 
     values = {"seller_name": seller.seller_name,
               "email": seller.email,
-              "status": seller.status}
+              "status": seller.status.value}
 
     return await database.execute(query, values)
 
@@ -42,7 +42,7 @@ async def update_seller_by_id(seller_id: int, seller: Seller) -> None:
         "seller_id": seller_id,
         "seller_name": seller.seller_name,
         "email": seller.email,
-        "status": seller.status
+        "status": seller.status.value
     }
 
     await database.execute(query, values)

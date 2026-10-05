@@ -58,20 +58,21 @@ async def get_item_by_id(item_id: int) -> Optional[Item]:
         str_item = cache_repository.get_cache_entity(str(item_id))
 
         if str_item:
-            item_data = json.loads(str_item)
+            item = _to_item(json.loads(str_item))
+            # Refresh the TTL on a cache hit.
             cache_repository.remove_cache_entity(str(item_id))
-            cache_repository.create_cache_entity(str(item_id), _to_item(item_data).json())
-            return _to_item(item_data)
-    else:
-        query = f"SELECT * FROM {TABLE_NAME} WHERE item_id=:item_id"
-
-        record: Optional[Record] = await database.fetch_one(query, values={"item_id": item_id})
-        if record:
-            item = _to_item(record)
-            cache_repository.create_cache_entity(str(item_id), item.json())
+            cache_repository.create_cache_entity(str(item_id), item.model_dump_json())
             return item
 
-        return _to_item(record) if record else None
+        return None
+
+    query = f"SELECT * FROM {TABLE_NAME} WHERE item_id=:item_id"
+
+    record: Optional[Record] = await database.fetch_one(query, values={"item_id": item_id})
+    if record:
+        item = _to_item(record)
+        cache_repository.create_cache_entity(str(item_id), item.model_dump_json())
+        return item
 
     return None
 

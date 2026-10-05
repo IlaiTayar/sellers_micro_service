@@ -1,3 +1,4 @@
+from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
 
@@ -8,8 +9,16 @@ class Config(BaseSettings):
     MYSQL_PORT: int = 3307
     MYSQL_DATABASE: str = "main"
 
-    DATABASE_URL: str = f"mysql+aiomysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
-
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6380
     REDIS_TTL: int = 100
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def DATABASE_URL(self) -> str:
+        # Built from the individual MYSQL_* settings so that environment
+        # variable overrides are actually reflected in the connection URL.
+        return (
+            f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+        )

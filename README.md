@@ -1,73 +1,135 @@
-first_serverA:
+# Sellers Micro Service
 
-lightweight FastAPI service with aiomysql for async MySQL access,
-Redis as a cache layer, all containerized with Docker and orchestrated via docker‑compose.
+A small FastAPI micro service that manages **sellers** and the **items** they offer.
+It is one half of a two-service learning project and is consumed over HTTP by the
+companion [`customer_micro_service`](https://github.com/IlaiTayar/customer_micro_service),
+which looks up item prices and validates favorite items against this service.
 
-Features:
+> This is a personal learning project built to practice a layered micro service
+> architecture (REST API + MySQL + Redis caching). It is not meant for production use.
 
-- FastAPI: Building blocks for async REST endpoints.
-- aiomysql + databases: Async MySQL driver.
-- Redis: Simple key‑value cache (e.g., customer lookup).
-- Docker / docker‑compose: Reproducible environment, zero‑config deployment.
-- Layered architecture: controller, repository, service – keeps business logic testable.
+## Features
 
-Quick start:
+- CRUD for **sellers**, each with an `active` / `inactive` status.
+- CRUD for **items**, each belonging to a seller.
+- Lookup of an item by name returning the **lowest-priced** match (used by the customer
+  service when pricing orders).
+- **Redis** caching for item-by-id reads, with a configurable TTL.
 
-# Clone
-git clone https://github.com/IlaiTayar/first_server.git
-cd first_server
+## Tech stack
 
-# ── Optionally create a virtual env ──
-python -m venv .venv
-source .venv\Scripts\activate   # apple: .venv/bin/activate
+- Python 3.11+
+- [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
+- [`databases`](https://www.encode.io/databases/) + `aiomysql` (async MySQL access)
+- [Pydantic v2](https://docs.pydantic.dev/) + `pydantic-settings`
+- [Redis](https://redis.io/) via `redis-py`
 
-# Install dependencies
-pip install -r requirements.txt
+## Architecture
 
-# Run locally (no Docker)
-uvicorn main:app --reload
+The service follows a clean, layered structure:
 
-Docker:
+```
+controller/   FastAPI routers (HTTP layer, request/response + error mapping)
+service/      Business logic / validation
+repository/   Data access (SQL queries + Redis cache)
+model/        Pydantic domain models (Seller, Item)
+config/       Settings loaded from environment variables
+```
 
-# Build & start services
+## Project layout
+
+```
+sellers_micro_service/
+├─ main.py                      # FastAPI app + startup/shutdown (lifespan)
+├─ database.py                  # Async Database instance
+├─ config/config.py             # Settings (env-driven)
+├─ controller/                  # seller / item routers
+├─ service/                     # business logic
+├─ repository/                  # SQL + cache access
+├─ model/                       # pydantic models (Seller, Item)
+├─ redisClient/redis_client.py  # Redis client
+├─ resources/db-migrations/     # init.sql (schema + seed data)
+├─ docker-compose.yml           # MySQL + Redis for local development
+└─ requirements.txt
+```
+
+## Configuration
+
+All settings have defaults and can be overridden with environment variables
+(see `config/config.py`):
+
+| Variable         | Default      | Description          |
+|------------------|--------------|----------------------|
+| `MYSQL_USER`     | `user`       | MySQL user           |
+| `MYSQL_PASSWORD` | `password`   | MySQL password       |
+| `MYSQL_HOST`     | `localhost`  | MySQL host           |
+| `MYSQL_PORT`     | `3307`       | MySQL port           |
+| `MYSQL_DATABASE` | `main`       | Database name        |
+| `REDIS_HOST`     | `localhost`  | Redis host           |
+| `REDIS_PORT`     | `6380`       | Redis port           |
+| `REDIS_TTL`      | `100`        | Cache TTL in seconds |
+
+The SQLAlchemy-style `DATABASE_URL` is derived automatically from the `MYSQL_*` values.
+
+> Note: this service uses ports `3307` (MySQL) and `6380` (Redis) so it can run
+> side-by-side with the customer service, which uses `3306` and `6379`.
+
+## Getting started
+
+### 1. Start MySQL and Redis
+
+```bash
 docker compose up -d
+```
 
-# Stop
-docker compose down 
+This starts a MySQL 8 instance on `3307` (seeded from `resources/db-migrations/init.sql`)
+and a Redis instance on `6380`.
 
-The API will be available at http://localhost:8000.
+### 2. Install dependencies
 
-API reference:
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-HTTP,Path,Description
-POST /customers/,"Create a new customer. Body: {first_name, last_name, email}.",
-GET /customers/{id},Retrieve customer by ID.,
-GET /orders/,List all orders for the authenticated customer (via customer_id query).,
-POST /orders/,Create an order for a customer.,
+### 3. Run the service
 
-All endpoints return JSON; see the OpenAPI docs at http://localhost:8000/docs.
+The customer service expects this one on port `8001`:
 
-Architecture overview:
-- The controller layers expose the HTTP routes.
-- The repository performs async DB queries and caches results with Redis.
-- Redis is configured in config/config.py (TTL = 100 s).
-- Docker volumes expose MySQL data persistently; the API container uses the same network as the DB and cache.
+```bash
+uvicorn main:app --reload --port 8001
+```
 
-Configuration:
+Interactive API docs are then available at `http://localhost:8001/docs`.
 
-All settings live in config/config.py. Override them with environment variables:
+## API overview
 
-MYSQL_HOST=mysql,
-MYSQL_USER=root,
-MYSQL_PASSWORD=secret,
-MYSQL_DATABASE=main,
-REDIS_HOST=redis,
-REDIS_PORT=6379
+### Sellers (`/seller`)
 
-Testing:
+| Method | Path                    | Description             |
+|--------|-------------------------|-------------------------|
+| POST   | `/seller/create`        | Create a seller         |
+| PUT    | `/seller/update-{id}`   | Update a seller by id   |
+| GET    | `/seller/get-{id}`      | Get a seller by id      |
+| GET    | `/seller/get/all`       | List all sellers        |
+| DELETE | `/seller/{id}`          | Delete a seller by id   |
 
-pytest -v
+### Items (`/item`)
 
-(You’ll need pytest-asyncio and httpx in dev dependencies.)
+| Method | Path                       | Description                               |
+|--------|----------------------------|-------------------------------------------|
+| POST   | `/item/create`             | Create an item                            |
+| PUT    | `/item/update-{id}`        | Update an item by id                      |
+| GET    | `/item/get-id-{id}`        | Get an item by id                         |
+| GET    | `/item/get-name-{name}`    | Get the lowest-priced item with that name |
+| GET    | `/item/get-all`            | List all items                            |
+| DELETE | `/item/delete-{id}`        | Delete an item by id                      |
 
-LicenseMIT © 2026 IlaiTayar
+### Example
+
+```bash
+curl -X POST http://localhost:8001/item/create \
+  -H "Content-Type: application/json" \
+  -d '{"seller_id": 1, "item_name": "Laptop", "price": 999.99}'
+```
