@@ -36,7 +36,7 @@ async def get_item_by_id(item_id: int) -> Item:
 @router.get("/get-name-{item_name}", response_model=Item, status_code=200)
 async def get_item_by_name(item_name: str) -> Item:
     result = await item_service.get_item_by_name(item_name)
-    if not result:
+    if result is None:
         raise HTTPException(status_code=404, detail=f"Item with name: {item_name} not found.")
 
     return result
