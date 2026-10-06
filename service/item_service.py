@@ -15,6 +15,9 @@ async def update_item_by_id(item_id: int, item: Item) -> Union[Item, ItemExcepti
     if isinstance(existing_item, ItemException):
         return existing_item
 
+
+    item.item_id = item_id
+
     await item_repository.update_item_by_id(item_id, item)
     return item
 
