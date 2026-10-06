@@ -14,18 +14,20 @@ def _to_item(record: Record) -> Item:
         item_id=record["item_id"],
         seller_id=record["seller_id"],
         item_name=record["item_name"],
-        price=record["price"]
+        price=record["price"],
+        image_url=record["image_url"]
     )
 
 async def create_item(item: Item) -> int:
     query = f"""
-        INSERT INTO {TABLE_NAME} (seller_id, item_name, price)
-        VALUES (:seller_id, :item_name, :price)
+        INSERT INTO {TABLE_NAME} (seller_id, item_name, price, image_url)
+        VALUES (:seller_id, :item_name, :price, :image_url)
     """
 
     values = {"seller_id": item.seller_id,
               "item_name": item.item_name,
-              "price": item.price
+              "price": item.price,
+              "image_url": item.image_url
               }
 
     return await database.execute(query, values)
@@ -39,7 +41,8 @@ async def update_item_by_id(item_id: int, item: Item) -> None:
         UPDATE {TABLE_NAME}
         SET seller_id = :seller_id,
             item_name = :item_name,
-            price = :price
+            price = :price,
+            image_url = :image_url
         WHERE item_id = :item_id
     """
 
@@ -48,6 +51,7 @@ async def update_item_by_id(item_id: int, item: Item) -> None:
         "seller_id": item.seller_id,
         "item_name": item.item_name,
         "price": item.price,
+        "image_url": item.image_url,
     }
 
     await database.execute(query, values)

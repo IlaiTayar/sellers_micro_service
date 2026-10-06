@@ -8,3 +8,4 @@ class Item(BaseModel):
     seller_id: int
     item_name: str
     price: float
+    image_url: Optional[str] = None

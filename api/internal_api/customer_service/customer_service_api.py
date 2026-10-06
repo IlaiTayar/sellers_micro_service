@@ -1,14 +1,18 @@
 import httpx
+from typing import Optional
+
 from fastapi import HTTPException
 
 from database import config
 
 
-async def _get_from_customer_service(url: str) -> int:
+async def _get_from_customer_service(url: str, params: Optional[dict] = None) -> int:
+
+    headers = {"X-Internal-Api-Key": config.INTERNAL_API_KEY}
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url)
+            response = await client.get(url, params=params, headers=headers)
 
     except (httpx.ConnectError, httpx.TimeoutException) as err:
         raise HTTPException(
@@ -32,12 +36,12 @@ async def _get_from_customer_service(url: str) -> int:
 
 
 async def count_orders_referencing_item_name(item_name: str) -> int:
-    url = f"{config.CUSTOMER_SERVICE_BASE_URL}/order/references/by-item-name-{item_name}"
+    url = f"{config.CUSTOMER_SERVICE_BASE_URL}/order/references"
 
-    return await _get_from_customer_service(url)
+    return await _get_from_customer_service(url, params={"item_name": item_name})
 
 
 async def count_favorites_referencing_item_id(item_id: int) -> int:
-    url = f"{config.CUSTOMER_SERVICE_BASE_URL}/customer-favorite-item/references/by-item-{item_id}"
+    url = f"{config.CUSTOMER_SERVICE_BASE_URL}/customer-favorite-item/references"
 
-    return await _get_from_customer_service(url)
+    return await _get_from_customer_service(url, params={"item_id": item_id})

@@ -28,6 +28,14 @@ async def get_seller_by_id(seller_id: int) -> Union[Seller, SellerException]:
     return seller
 
 
+async def get_seller_by_email(email: str) -> Union[Seller, SellerException]:
+    seller: Optional[Seller] = await seller_repository.get_seller_by_email(email)
+    if seller is None:
+        return SellerException.SELLER_NOT_FOUND
+
+    return seller
+
+
 async def get_all_sellers() -> List[Seller]:
     return await seller_repository.get_all_sellers()
 

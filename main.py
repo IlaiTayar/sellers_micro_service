@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from controller.seller_controller import router as seller_router
 from controller.item_cotroller import router as item_router
+from controller.auth_controller import router as auth_router
 from database import database
 
 
@@ -19,5 +21,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app: FastAPI = FastAPI(lifespan=lifespan)
 
+app.include_router(auth_router)
 app.include_router(seller_router)
 app.include_router(item_router)
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

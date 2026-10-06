@@ -69,6 +69,8 @@ All settings have defaults and can be overridden with environment variables
 | `MYSQL_HOST`     | `localhost`  | MySQL host           |
 | `MYSQL_PORT`     | `3307`       | MySQL port           |
 | `MYSQL_DATABASE` | `main`       | Database name        |
+| `CUSTOMER_SERVICE_BASE_URL` | `http://localhost:8000` | Base URL of the customer service |
+| `INTERNAL_API_KEY` | `internal-shared-key` | Shared key sent to the customer service's internal `/references` endpoints |
 | `REDIS_HOST`     | `localhost`  | Redis host           |
 | `REDIS_PORT`     | `6380`       | Redis port           |
 | `REDIS_TTL`      | `100`        | Cache TTL in seconds |
@@ -111,13 +113,13 @@ Interactive API docs are then available at `http://localhost:8001/docs`.
 
 ### Sellers (`/seller`)
 
-| Method | Path                    | Description             |
-|--------|-------------------------|-------------------------|
-| POST   | `/seller/create`        | Create a seller         |
-| PUT    | `/seller/update-{id}`   | Update a seller by id   |
-| GET    | `/seller/get-{id}`      | Get a seller by id      |
-| GET    | `/seller/get/all`       | List all sellers        |
-| DELETE | `/seller/{id}`          | Delete a seller by id   |
+| Method | Path             | Description           |
+|--------|------------------|-----------------------|
+| POST   | `/seller`        | Create a seller       |
+| GET    | `/seller`        | List all sellers      |
+| GET    | `/seller/{id}`   | Get a seller by id    |
+| PUT    | `/seller/{id}`   | Update a seller by id |
+| DELETE | `/seller/{id}`   | Delete a seller by id |
 
 > Deleting a seller cascades to its items, but is blocked with `409` if any of those items
 > are still referenced by customer orders or favorites (checked via the customer service).
@@ -125,23 +127,24 @@ Interactive API docs are then available at `http://localhost:8001/docs`.
 
 ### Items (`/item`)
 
-| Method | Path                       | Description                               |
-|--------|----------------------------|-------------------------------------------|
-| POST   | `/item/create`             | Create an item                            |
-| PUT    | `/item/update-{id}`        | Update an item by id                      |
-| GET    | `/item/get-id-{id}`        | Get an item by id                         |
-| GET    | `/item/get-name-{name}`    | Get the lowest-priced item with that name |
-| GET    | `/item/get-all`            | List all items                            |
-| DELETE | `/item/delete-{id}`        | Delete an item by id                      |
+| Method | Path                      | Description                               |
+|--------|---------------------------|-------------------------------------------|
+| POST   | `/item`                   | Create an item                            |
+| GET    | `/item`                   | List all items                            |
+| GET    | `/item/by-name?item_name=`| Get the lowest-priced item with that name |
+| GET    | `/item/{id}`              | Get an item by id                         |
+| PUT    | `/item/{id}`              | Update an item by id                      |
+| DELETE | `/item/{id}`              | Delete an item by id                      |
 
 > Deleting an item is blocked with `409 ITEM_IN_USE` if it is still referenced by customer
-> orders or favorites. These reference checks call the customer service; if that service is
+> orders or favorites. These reference checks call the customer service's internal
+> `/references` endpoints with the shared `X-Internal-Api-Key` header; if that service is
 > unavailable the request fails with `503`.
 
 ### Example
 
 ```bash
-curl -X POST http://localhost:8001/item/create \
+curl -X POST http://localhost:8001/item \
   -H "Content-Type: application/json" \
   -d '{"seller_id": 1, "item_name": "Laptop", "price": 999.99}'
 ```

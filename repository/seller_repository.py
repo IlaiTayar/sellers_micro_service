@@ -58,6 +58,16 @@ async def get_seller_by_id(seller_id: int) -> Optional[Seller]:
     return _to_seller(record) if record else None
 
 
+async def get_seller_by_email(email: str) -> Optional[Seller]:
+    query = f"""
+    SELECT * FROM {TABLE_NAME} WHERE email=:email
+    """
+
+    record: Optional[Record] = await database.fetch_one(query, values={"email": email})
+
+    return _to_seller(record) if record else None
+
+
 async def get_all_sellers() -> List[Seller]:
     query = f"SELECT * FROM {TABLE_NAME}"
 
