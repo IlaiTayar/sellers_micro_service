@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -39,7 +39,7 @@ async def get_all_items() -> List[Item]:
 @router.get("/by-name", response_model=Item, status_code=200)
 async def get_item_by_name(
     item_name: str = Query(...),
-    seller_name: str | None = Query(None)
+    seller_name: Optional[str] = Query(None)
 ) -> Item:
     result: Union[Item, ItemException] = await item_service.get_item_by_name(item_name, seller_name)
     return _exception_handler(result)
