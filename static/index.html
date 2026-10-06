@@ -88,10 +88,17 @@
           <div class="field"><label>Image URL (optional)</label><input id="iImage" placeholder="leave blank"/></div>
           <button id="iCreate" class="btn">Add item</button>
         </div>
-        <p class="hint" id="itemHint">Search by item name, optionally limit it to a seller, search all items by seller name, or search a seller by ID. Sellers can manage only their own items. Admins have full CRUD and can assign items to any seller.</p>
+        <p class="hint" id="itemHint">Sellers can search by item name, item ID, seller name, or seller ID. Sellers can manage only their own items. Admins have full CRUD and can assign items to any seller.</p>
         <div class="inline">
-          <div class="field"><label>Find item by name</label><input id="itemSearchName" placeholder="Keyboard"/></div>
-          <button id="itemSearchBtn" class="btn secondary">Search item by id</button>
+          <div class="field"><label>Item name</label><input id="itemSearchName" placeholder="Keyboard"/></div>
+          <div class="field"><label>Seller name (optional)</label><input id="itemSearchSeller" placeholder="TechStore"/></div>
+          <button id="itemSearchBtn" class="btn secondary">Search item</button>
+          <div class="field"><label>Item ID</label><input id="itemSearchId" type="number" placeholder="123"/></div>
+          <button id="itemSearchIdBtn" class="btn secondary">Search item ID</button>
+          <div class="field"><label>Seller name</label><input id="sellerSearchName" placeholder="TechStore"/></div>
+          <button id="sellerSearchBtn" class="btn secondary">Search seller items</button>
+          <div class="field"><label>Seller ID</label><input id="sellerSearchId" type="number" placeholder="1"/></div>
+          <button id="sellerSearchIdBtn" class="btn secondary">Search seller ID</button>
         </div>
         <div id="itemSearchResults" class="items"></div>
         <div id="itemsWrap" class="items"></div>
