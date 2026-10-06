@@ -44,6 +44,8 @@ function applySession(r) {
   $('logoutBtn').classList.remove('hidden');
   $('whoami').textContent = 'Signed in as ' + r.seller_name + ' (id ' + r.seller_id + ')';
   $('adminBadge').style.display = isAdmin() ? 'inline-block' : 'none';
+  $('adminSellerField').style.display = isAdmin() ? 'block' : 'none';
+  $('sellerActionsHead').style.display = isAdmin() ? 'table-cell' : 'none';
   sellerScope = isAdmin() ? 'all' : 'me';
   itemScope = isAdmin() ? 'all' : 'me';
   syncSeg('sellerScope', sellerScope);
@@ -112,7 +114,10 @@ async function loadSellers() {
       const st = (s.status || '').toLowerCase();
       const idCell = reveal ? (s.seller_id + (mine ? ' <span class="badge me">me</span>' : '')) : '<span class="muted">hidden</span>';
       const emailCell = reveal ? esc(s.email) : '<span class="muted">hidden</span>';
-      return '<tr><td>' + idCell + '</td><td>' + esc(s.seller_name) + '</td><td>' + emailCell + '</td><td><span class="badge ' + st + '">' + esc(s.status) + '</span></td></tr>';
+      const actions = isAdmin()
+        ? '<td><button class="btn secondary sm" onclick="editSeller(' + s.seller_id + ')">Edit</button> <button class="btn danger sm" onclick="deleteSeller(' + s.seller_id + ')">Delete</button></td>'
+        : '';
+      return '<tr><td>' + idCell + '</td><td>' + esc(s.seller_name) + '</td><td>' + emailCell + '</td><td><span class="badge ' + st + '">' + esc(s.status) + '</span></td>' + actions + '</tr>';
     }).join('') || '<tr><td colspan=4 class="empty">No sellers</td></tr>';
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -158,9 +163,46 @@ async function createItem() {
   const price = parseFloat($('iPrice').value);
   if (!item_name || isNaN(price)) { toast('Enter an item name and price', 'err'); return; }
   const image_url = $('iImage').value.trim() || null;
-  try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; loadItems(); }
+  const seller_id = isAdmin() ? parseInt($('iSellerId').value, 10) : session.seller_id;
+  if (isAdmin() && !seller_id) { toast('Admin must enter the seller id for the new item', 'err'); return; }
+  try { await api('/item', 'POST', { seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; if ($('iSellerId')) $('iSellerId').value = ''; loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 }
+
+window.editSeller = async function (id) {
+  if (!isAdmin()) return;
+  const row = Array.from(document.querySelectorAll('#sellersBody tr')).find(r => r.textContent.includes(String(id)));
+  const cells = row ? row.querySelectorAll('td') : [];
+  const currentName = cells[1] ? cells[1].textContent.trim() : '';
+  const currentEmail = cells[2] ? cells[2].textContent.trim() : '';
+  const currentStatus = cells[3] ? cells[3].textContent.trim() : 'active';
+  const seller_name = prompt('Seller name:', currentName);
+  if (seller_name == null || !seller_name.trim()) return;
+  const email = prompt('Email:', currentEmail);
+  if (email == null || !email.trim()) return;
+  const status = prompt('Status (active/inactive):', currentStatus);
+  if (status == null) return;
+  try {
+    await api('/seller/' + id, 'PUT', { seller_id: id, seller_name: seller_name.trim(), email: email.trim(), status: status.trim().toLowerCase() });
+    toast('Seller updated', 'ok');
+    loadSellers();
+  } catch (e) { toast('Seller update failed: ' + e.message, 'err'); }
+};
+
+window.deleteSeller = async function (id) {
+  if (!isAdmin()) return;
+  if (id === session.seller_id) {
+    toast('Use your profile to delete your own account', 'err');
+    return;
+  }
+  if (!confirm('Delete seller ' + id + '?')) return;
+  try {
+    await api('/seller/' + id, 'DELETE');
+    toast('Seller deleted', 'ok');
+    loadSellers();
+    loadItems();
+  } catch (e) { toast('Seller deletion failed: ' + e.message, 'err'); }
+};
 
 window.editItem = async function (id) {
   const card = document.querySelector('.item-card[data-id="' + id + '"]');
