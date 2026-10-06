@@ -153,6 +153,14 @@ async function searchItemByName() {
   } catch (e) { toast('Item search failed: ' + e.message, 'err'); }
 }
 
+async function searchItemById() {
+  const id = parseInt($('itemSearchId').value, 10);
+  if (!id) { toast('Enter an item id', 'err'); return; }
+  try {
+    renderSearchItems([await api('/item/' + id)]);
+  } catch (e) { toast('Item ID search failed: ' + e.message, 'err'); }
+}
+
 async function searchItemsBySellerName() {
   const seller = $('sellerSearchName').value.trim();
   if (!seller) { toast('Enter a seller name', 'err'); return; }
@@ -268,7 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('pDelete').onclick = deleteProfile;
   $('iCreate').onclick = createItem;
   $('itemSearchBtn').onclick = searchItemByName;
-  $('sellerSearchBtn').onclick = searchItemsBySeller;
+  $('sellerSearchIdBtn').onclick = searchItemsBySellerId;
+  $('sellerSearchBtn').onclick = searchItemsBySellerName;
 
   document.querySelectorAll('input').forEach(input => input.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
