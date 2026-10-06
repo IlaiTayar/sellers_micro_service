@@ -84,16 +84,13 @@
         <div class="inline">
           <div class="field"><label>Item name</label><input id="iName" placeholder="Gaming Mouse"/></div>
           <div class="field"><label>Price</label><input id="iPrice" type="number" step="0.01" placeholder="29.99"/></div>
-          <div class="field"><label>Image URL (optional)</label><input id="iImage" placeholder="leave blank for auto"/></div>
+          <div class="field"><label>Image URL (optional)</label><input id="iImage" placeholder="leave blank"/></div>
           <button id="iCreate" class="btn">Add item</button>
         </div>
-        <p class="hint">New items are listed under your seller id. If you leave the image blank, the UI uses a local placeholder. You can only edit or delete your own items (admins can edit any).</p>
+        <p class="hint" id="itemHint">You can search items by ID. Sellers can manage only their own items. Admins have full CRUD and can assign items to any seller.</p>
         <div class="inline">
           <div class="field"><label>Find item by name</label><input id="itemSearchName" placeholder="Keyboard"/></div>
-          <div class="field"><label>Seller name (optional)</label><input id="itemSearchSeller" placeholder="TechStore"/></div>
-          <button id="itemSearchBtn" class="btn secondary">Search item</button>
-          <div class="field"><label>All items from seller</label><input id="sellerSearchName" placeholder="TechStore"/></div>
-          <button id="sellerSearchBtn" class="btn secondary">Search seller</button>
+          <button id="itemSearchBtn" class="btn secondary">Search item by id</button>
         </div>
         <div id="itemSearchResults" class="items"></div>
         <div id="itemsWrap" class="items"></div>
