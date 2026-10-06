@@ -27,7 +27,10 @@ def _exception_handler(result: Any) -> Any:
 
 @router.post("", status_code=201)
 async def create_item(item: Item, principal: Principal = Depends(get_current_principal)) -> int:
-    item.seller_id = principal.principal_id
+    if principal.role != "admin":
+        item.seller_id = principal.principal_id
+    elif item.seller_id is None:
+        raise HTTPException(status_code=400, detail="Admin must provide a seller_id when creating an item")
     return await item_service.create_item(item)
 
 
@@ -36,19 +39,6 @@ async def get_all_items() -> List[Item]:
     return await item_service.get_all_items()
 
 
-@router.get("/by-name", response_model=Item, status_code=200)
-async def get_item_by_name(
-    item_name: str = Query(...),
-    seller_name: Optional[str] = Query(None)
-) -> Item:
-    result: Union[Item, ItemException] = await item_service.get_item_by_name(item_name, seller_name)
-    return _exception_handler(result)
-
-
-@router.get("/by-seller-name", response_model=List[Item], status_code=200)
-async def get_items_by_seller_name(seller_name: str = Query(...)) -> List[Item]:
-    result: Union[List[Item], ItemException] = await item_service.get_items_by_seller_name(seller_name)
-    return _exception_handler(result)
 
 
 @router.get("/{item_id}", response_model=Item, status_code=200)
@@ -64,7 +54,11 @@ async def update_item_by_id(item_id: int, item: Item, principal: Principal = Dep
     existing_item = _exception_handler(existing_item)
     require_ownership(principal, existing_item.seller_id)
 
-    item.seller_id = principal.principal_id
+    if principal.role == "admin":
+        if item.seller_id is None:
+            item.seller_id = existing_item.seller_id
+    else:
+        item.seller_id = principal.principal_id
 
     result: Union[Item, ItemException] = await item_service.update_item_by_id(item_id, item)
 
