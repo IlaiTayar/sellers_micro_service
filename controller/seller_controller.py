@@ -35,6 +35,13 @@ async def get_all_sellers() -> List[Seller]:
     return await seller_service.get_all_sellers()
 
 
+@router.get("/by-name", response_model=Seller, status_code=200)
+async def get_seller_by_name(seller_name: str) -> Seller:
+    result: Union[Seller, SellerException] = await seller_service.get_seller_by_name(seller_name)
+
+    return _exception_handler(result)
+
+
 @router.get("/{seller_id}", response_model=Seller, status_code=200)
 async def get_seller_by_id(seller_id: int) -> Seller:
     result: Union[Seller, SellerException] = await seller_service.get_seller_by_id(seller_id)
