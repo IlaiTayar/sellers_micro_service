@@ -35,10 +35,10 @@ async def _get_from_customer_service(url: str, params: Optional[dict] = None) ->
     return int(response.json())
 
 
-async def count_orders_referencing_item_name(item_name: str) -> int:
+async def count_orders_referencing_item_id(item_id: int) -> int:
     url = f"{config.CUSTOMER_SERVICE_BASE_URL}/order/references"
 
-    return await _get_from_customer_service(url, params={"item_name": item_name})
+    return await _get_from_customer_service(url, params={"item_id": item_id})
 
 
 async def count_favorites_referencing_item_id(item_id: int) -> int:
