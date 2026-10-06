@@ -50,6 +50,10 @@ async def get_item_by_name(item_name: str, seller_name: Optional[str] = None) ->
     return item
 
 
+async def get_items_by_seller_id(seller_id: int) -> List[Item]:
+    return await item_repository.get_items_by_seller_id(seller_id)
+
+
 async def get_items_by_seller_name(seller_name: str) -> Union[List[Item], ItemException]:
     from repository import seller_repository
     seller = await seller_repository.get_seller_by_name(seller_name)
