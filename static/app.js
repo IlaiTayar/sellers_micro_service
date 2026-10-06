@@ -153,7 +153,7 @@ async function searchItemByName() {
   } catch (e) { toast('Item search failed: ' + e.message, 'err'); }
 }
 
-async function searchItemsBySeller() {
+async function searchItemsBySellerName() {
   const seller = $('sellerSearchName').value.trim();
   if (!seller) { toast('Enter a seller name', 'err'); return; }
   try {
@@ -161,12 +161,18 @@ async function searchItemsBySeller() {
   } catch (e) { toast('Seller item search failed: ' + e.message, 'err'); }
 }
 
+async function searchItemsBySellerId() {
+  const id = parseInt($('sellerSearchId').value, 10);
+  if (!id) { toast('Enter a seller id', 'err'); return; }
+  try {
+    renderSearchItems(await api('/item/by-seller-id?seller_id=' + id));
+  } catch (e) { toast('Seller ID search failed: ' + e.message, 'err'); }
+}
+
 function renderSearchItems(items) {
-  const nameById = {};
-  items.forEach(it => { nameById[it.seller_id] = $('sellerSearchName').value.trim() || ('Seller #' + it.seller_id); });
   $('itemSearchResults').innerHTML = (items || []).map(it => {
     const img = it.image_url || PLACEHOLDER;
-    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\'' + PLACEHOLDER + '\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · ' + esc(nameById[it.seller_id] || ('Seller #' + it.seller_id)) + '</div></div></div>';
+    return '<div class="item-card"><img src="' + esc(img) + '" /><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
   }).join('') || '<div class="empty">No matching items found.</div>';
 }
 
