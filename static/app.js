@@ -156,7 +156,7 @@ async function searchItemById() {
 function renderSearchItems(items) {
   $('itemSearchResults').innerHTML = (items || []).map(it => {
     const img = it.image_url || PLACEHOLDER;
-    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\\'' + PLACEHOLDER + '\\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
+    return '<div class="item-card"><img src="' + esc(img) + '"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
   }).join('') || '<div class="empty">No matching items found.</div>';
 }
 
