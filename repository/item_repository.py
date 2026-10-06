@@ -80,16 +80,37 @@ async def get_item_by_id(item_id: int) -> Optional[Item]:
     return None
 
 
-async def get_item_by_name(item_name: str) -> Optional[Item]:
-    query = f"""
-        SELECT * FROM {TABLE_NAME}
-        WHERE item_name = :item_name
-        ORDER BY price ASC
-        LIMIT 1
-    """
+async def get_item_by_name(item_name: str, seller_id: Optional[int] = None) -> Optional[Item]:
+    if seller_id is None:
+        query = f"""
+            SELECT * FROM {TABLE_NAME}
+            WHERE LOWER(item_name)=LOWER(:item_name)
+            ORDER BY price ASC
+            LIMIT 1
+        """
+        values = {"item_name": item_name}
+    else:
+        query = f"""
+            SELECT * FROM {TABLE_NAME}
+            WHERE LOWER(item_name)=LOWER(:item_name) AND seller_id=:seller_id
+            ORDER BY price ASC
+            LIMIT 1
+        """
+        values = {"item_name": item_name, "seller_id": seller_id}
 
-    record: Optional[Record] = await database.fetch_one(query, values={"item_name": item_name})
+    record: Optional[Record] = await database.fetch_one(query, values=values)
     return _to_item(record) if record else None
+
+
+async def get_items_by_seller_name(seller_name: str) -> List[Item]:
+    query = f"""
+        SELECT i.* FROM {TABLE_NAME} i
+        INNER JOIN seller s ON s.seller_id=i.seller_id
+        WHERE LOWER(s.seller_name)=LOWER(:seller_name)
+        ORDER BY i.item_name, i.price ASC
+    """
+    records: List[Record] = await database.fetch_all(query, values={"seller_name": seller_name})
+    return [_to_item(record) for record in records]
 
 
 async def get_all_items() -> List[Item]:

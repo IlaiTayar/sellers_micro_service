@@ -28,6 +28,14 @@ async def get_seller_by_id(seller_id: int) -> Union[Seller, SellerException]:
     return seller
 
 
+async def get_seller_by_name(seller_name: str) -> Union[Seller, SellerException]:
+    seller: Optional[Seller] = await seller_repository.get_seller_by_name(seller_name)
+    if seller is None:
+        return SellerException.SELLER_NOT_FOUND
+
+    return seller
+
+
 async def get_seller_by_email(email: str) -> Union[Seller, SellerException]:
     seller: Optional[Seller] = await seller_repository.get_seller_by_email(email)
     if seller is None:
@@ -48,7 +56,7 @@ async def delete_seller_by_id(seller_id: int) -> Union[str, SellerException]:
     seller_items = await item_repository.get_items_by_seller_id(seller_id)
 
     for item in seller_items:
-        order_references = await customer_service_api.count_orders_referencing_item_name(item.item_name)
+        order_references = await customer_service_api.count_orders_referencing_item_id(item.item_id)
         favorite_references = await customer_service_api.count_favorites_referencing_item_id(item.item_id)
 
         if order_references > 0 or favorite_references > 0:

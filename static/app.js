@@ -7,13 +7,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isAdmin = () => session && session.role === 'admin';
 const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180"><rect width="100%" height="100%" fill="#eef1f6"/><text x="50%" y="50%" fill="#9aa6b8" font-family="sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle">No image</text></svg>');
-const slug = (name) => ((name || 'item').toLowerCase().trim().replace(/[^a-z0-9]+/g, ',').replace(/^,+|,+$/g, '') || 'item');
-const autoImage = (name) => {
-  const s = slug(name);
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100000;
-  return 'https://loremflickr.com/400/300/' + encodeURIComponent(s) + '?lock=' + h;
-};
+
 
 function toast(msg, kind) {
   const t = $('toast');
@@ -25,12 +19,19 @@ function toast(msg, kind) {
 async function api(path, method, body) {
   const headers = { 'Content-Type': 'application/json' };
   if (session && session.token) headers['Authorization'] = 'Bearer ' + session.token;
-  const res = await fetch(API + path, { method: method || 'GET', headers, body: body ? JSON.stringify(body) : undefined });
+  let res;
+  try {
+    res = await fetch(API + path, { method: method || 'GET', headers, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) {
+    throw new Error('Could not reach the server. Please try again.');
+  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
   if (!res.ok) {
-    const detail = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : ('HTTP ' + res.status);
+    const detail = data && data.detail
+      ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail))
+      : ('Request failed (HTTP ' + res.status + ')');
     throw new Error(detail);
   }
   return data;
@@ -123,7 +124,7 @@ async function loadItems() {
     try {
       const sls = await api('/seller');
       sls.forEach(s => { nameById[s.seller_id] = (s.seller_name || '').trim(); });
-    } catch (e) {}
+    } catch (e) { toast('Could not load seller names: ' + e.message, 'err'); }
     if (itemScope === 'me') list = list.filter(it => it.seller_id === session.seller_id);
     $('itemsWrap').innerHTML = list.map(it => {
       const mine = it.seller_id === session.seller_id;
@@ -138,11 +139,39 @@ async function loadItems() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
+async function searchItemByName() {
+  const name = $('itemSearchName').value.trim();
+  const seller = $('itemSearchSeller').value.trim();
+  if (!name) { toast('Enter an item name', 'err'); return; }
+  try {
+    const query = '?item_name=' + encodeURIComponent(name) + (seller ? '&seller_name=' + encodeURIComponent(seller) : '');
+    const item = await api('/item/by-name' + query);
+    renderSearchItems([item]);
+  } catch (e) { toast('Item search failed: ' + e.message, 'err'); }
+}
+
+async function searchItemsBySeller() {
+  const seller = $('sellerSearchName').value.trim();
+  if (!seller) { toast('Enter a seller name', 'err'); return; }
+  try {
+    renderSearchItems(await api('/item/by-seller-name?seller_name=' + encodeURIComponent(seller)));
+  } catch (e) { toast('Seller item search failed: ' + e.message, 'err'); }
+}
+
+function renderSearchItems(items) {
+  const nameById = {};
+  items.forEach(it => { nameById[it.seller_id] = $('sellerSearchName').value.trim() || ('Seller #' + it.seller_id); });
+  $('itemSearchResults').innerHTML = (items || []).map(it => {
+    const img = it.image_url || PLACEHOLDER;
+    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\'' + PLACEHOLDER + '\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · ' + esc(nameById[it.seller_id] || ('Seller #' + it.seller_id)) + '</div></div></div>';
+  }).join('') || '<div class="empty">No matching items found.</div>';
+}
+
 async function createItem() {
   const item_name = $('iName').value.trim();
   const price = parseFloat($('iPrice').value);
   if (!item_name || isNaN(price)) { toast('Enter an item name and price', 'err'); return; }
-  const image_url = $('iImage').value.trim() || autoImage(item_name);
+  const image_url = $('iImage').value.trim() || null;
   try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 }
@@ -159,7 +188,7 @@ window.editItem = async function (id) {
   if (priceStr == null) return;
   const price = parseFloat(priceStr);
   if (isNaN(price)) { toast('Invalid price', 'err'); return; }
-  const image_url = prompt('Image URL (blank = auto):', curImg) || autoImage(item_name);
+  const image_url = prompt('Image URL (blank = no image):', curImg) || null;
   const seller_id = isAdmin() ? owner : session.seller_id;
   try { await api('/item/' + id, 'PUT', { item_id: id, seller_id, item_name: item_name.trim(), price, image_url }); toast('Item updated', 'ok'); loadItems(); }
   catch (e) { toast(e.message, 'err'); }
@@ -194,6 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('pSave').onclick = saveProfile;
   $('pDelete').onclick = deleteProfile;
   $('iCreate').onclick = createItem;
+  $('itemSearchBtn').onclick = searchItemByName;
+  $('sellerSearchBtn').onclick = searchItemsBySeller;
+
+  document.querySelectorAll('input').forEach(input => input.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const button = input.closest('.inline, .form-row')?.querySelector('button');
+    if (button) button.click();
+  }));
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
   document.querySelectorAll('.authtab').forEach(t => t.onclick = () => switchAuth(t.dataset.auth));
   document.querySelectorAll('#sellerScope .seg').forEach(b => b.onclick = () => { sellerScope = b.dataset.scope; syncSeg('sellerScope', sellerScope); loadSellers(); });
