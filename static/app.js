@@ -44,6 +44,8 @@ function applySession(r) {
   $('logoutBtn').classList.remove('hidden');
   $('whoami').textContent = 'Signed in as ' + r.seller_name + ' (id ' + r.seller_id + ')';
   $('adminBadge').style.display = isAdmin() ? 'inline-block' : 'none';
+  $('adminSellerField').style.display = isAdmin() ? 'block' : 'none';
+  $('sellerActionsHead').style.display = isAdmin() ? 'table-cell' : 'none';
   sellerScope = isAdmin() ? 'all' : 'me';
   itemScope = isAdmin() ? 'all' : 'me';
   syncSeg('sellerScope', sellerScope);
@@ -112,7 +114,8 @@ async function loadSellers() {
       const st = (s.status || '').toLowerCase();
       const idCell = reveal ? (s.seller_id + (mine ? ' <span class="badge me">me</span>' : '')) : '<span class="muted">hidden</span>';
       const emailCell = reveal ? esc(s.email) : '<span class="muted">hidden</span>';
-      return '<tr><td>' + idCell + '</td><td>' + esc(s.seller_name) + '</td><td>' + emailCell + '</td><td><span class="badge ' + st + '">' + esc(s.status) + '</span></td></tr>';
+      const actions = isAdmin() ? '<td><button class="btn secondary sm" onclick="editSeller(' + s.seller_id + ')">Edit</button> <button class="btn danger sm" onclick="deleteSeller(' + s.seller_id + ')">Delete</button></td>' : '';
+      return '<tr><td>' + idCell + '</td><td>' + esc(s.seller_name) + '</td><td>' + emailCell + '</td><td><span class="badge ' + st + '">' + esc(s.status) + '</span></td>' + actions + '</tr>';
     }).join('') || '<tr><td colspan=4 class="empty">No sellers</td></tr>';
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -150,7 +153,15 @@ async function searchItemByName() {
   } catch (e) { toast('Item search failed: ' + e.message, 'err'); }
 }
 
-async function searchItemsBySeller() {
+async function searchItemById() {
+  const id = parseInt($('itemSearchId').value, 10);
+  if (!id) { toast('Enter an item id', 'err'); return; }
+  try {
+    renderSearchItems([await api('/item/' + id)]);
+  } catch (e) { toast('Item ID search failed: ' + e.message, 'err'); }
+}
+
+async function searchItemsBySellerName() {
   const seller = $('sellerSearchName').value.trim();
   if (!seller) { toast('Enter a seller name', 'err'); return; }
   try {
@@ -158,12 +169,18 @@ async function searchItemsBySeller() {
   } catch (e) { toast('Seller item search failed: ' + e.message, 'err'); }
 }
 
+async function searchItemsBySellerId() {
+  const id = parseInt($('sellerSearchId').value, 10);
+  if (!id) { toast('Enter a seller id', 'err'); return; }
+  try {
+    renderSearchItems(await api('/item/by-seller-id?seller_id=' + id));
+  } catch (e) { toast('Seller ID search failed: ' + e.message, 'err'); }
+}
+
 function renderSearchItems(items) {
-  const nameById = {};
-  items.forEach(it => { nameById[it.seller_id] = $('sellerSearchName').value.trim() || ('Seller #' + it.seller_id); });
   $('itemSearchResults').innerHTML = (items || []).map(it => {
     const img = it.image_url || PLACEHOLDER;
-    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\'' + PLACEHOLDER + '\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · ' + esc(nameById[it.seller_id] || ('Seller #' + it.seller_id)) + '</div></div></div>';
+    return '<div class="item-card"><img src="' + esc(img) + '" /><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
   }).join('') || '<div class="empty">No matching items found.</div>';
 }
 
@@ -172,9 +189,38 @@ async function createItem() {
   const price = parseFloat($('iPrice').value);
   if (!item_name || isNaN(price)) { toast('Enter an item name and price', 'err'); return; }
   const image_url = $('iImage').value.trim() || null;
-  try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; loadItems(); }
+  try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; if ($('iSellerId')) $('iSellerId').value = ''; loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 }
+
+window.editSeller = async function (id) {
+  if (!isAdmin()) return;
+  const row = Array.from(document.querySelectorAll('#sellersBody tr')).find(r => r.textContent.includes(String(id)));
+  const cells = row ? row.querySelectorAll('td') : [];
+  const seller_name = prompt('Seller name:', cells[1] ? cells[1].textContent.trim() : '');
+  if (seller_name == null || !seller_name.trim()) return;
+  const email = prompt('Email:', cells[2] ? cells[2].textContent.trim() : '');
+  if (email == null || !email.trim()) return;
+  const status = prompt('Status (active/inactive):', cells[3] ? cells[3].textContent.trim() : 'active');
+  if (status == null) return;
+  try {
+    await api('/seller/' + id, 'PUT', { seller_id: id, seller_name: seller_name.trim(), email: email.trim(), status: status.trim().toLowerCase() });
+    toast('Seller updated', 'ok');
+    loadSellers();
+  } catch (e) { toast('Seller update failed: ' + e.message, 'err'); }
+};
+
+window.deleteSeller = async function (id) {
+  if (!isAdmin()) return;
+  if (id === session.seller_id) { toast('Use your profile to delete your own account', 'err'); return; }
+  if (!confirm('Delete seller ' + id + '?')) return;
+  try {
+    await api('/seller/' + id, 'DELETE');
+    toast('Seller deleted', 'ok');
+    loadSellers();
+    loadItems();
+  } catch (e) { toast('Seller deletion failed: ' + e.message, 'err'); }
+};
 
 window.editItem = async function (id) {
   const card = document.querySelector('.item-card[data-id="' + id + '"]');
@@ -189,7 +235,13 @@ window.editItem = async function (id) {
   const price = parseFloat(priceStr);
   if (isNaN(price)) { toast('Invalid price', 'err'); return; }
   const image_url = prompt('Image URL (blank = no image):', curImg) || null;
-  const seller_id = isAdmin() ? owner : session.seller_id;
+  let seller_id = session.seller_id;
+  if (isAdmin()) {
+    const sellerIdStr = prompt('Seller id:', String(owner));
+    if (sellerIdStr == null) return;
+    seller_id = parseInt(sellerIdStr, 10);
+    if (!seller_id) { toast('Invalid seller id', 'err'); return; }
+  }
   try { await api('/item/' + id, 'PUT', { item_id: id, seller_id, item_name: item_name.trim(), price, image_url }); toast('Item updated', 'ok'); loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 };
@@ -224,7 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('pDelete').onclick = deleteProfile;
   $('iCreate').onclick = createItem;
   $('itemSearchBtn').onclick = searchItemByName;
-  $('sellerSearchBtn').onclick = searchItemsBySeller;
+  $('sellerSearchIdBtn').onclick = searchItemsBySellerId;
+  $('sellerSearchBtn').onclick = searchItemsBySellerName;
 
   document.querySelectorAll('input').forEach(input => input.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;

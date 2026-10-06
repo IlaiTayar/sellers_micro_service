@@ -26,7 +26,9 @@ def _exception_handler(result: Any) -> Any:
 
 
 @router.post("", status_code=201)
-async def create_seller(seller: Seller) -> int:
+async def create_seller(seller: Seller, principal: Principal = Depends(get_current_principal)) -> int:
+    if principal.role != "admin":
+        raise HTTPException(status_code=403, detail="Only an admin can create seller accounts")
     return await seller_service.create_seller(seller)
 
 
