@@ -37,9 +37,17 @@ async def get_all_items() -> List[Item]:
 
 
 @router.get("/by-name", response_model=Item, status_code=200)
-async def get_item_by_name(item_name: str = Query(...)) -> Item:
-    result: Union[Item, ItemException] = await item_service.get_item_by_name(item_name)
+async def get_item_by_name(
+    item_name: str = Query(...),
+    seller_name: str | None = Query(None)
+) -> Item:
+    result: Union[Item, ItemException] = await item_service.get_item_by_name(item_name, seller_name)
+    return _exception_handler(result)
 
+
+@router.get("/by-seller-name", response_model=List[Item], status_code=200)
+async def get_items_by_seller_name(seller_name: str = Query(...)) -> List[Item]:
+    result: Union[List[Item], ItemException] = await item_service.get_items_by_seller_name(seller_name)
     return _exception_handler(result)
 
 
