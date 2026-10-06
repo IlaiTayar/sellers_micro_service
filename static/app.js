@@ -7,7 +7,13 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isAdmin = () => session && session.role === 'admin';
 const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180"><rect width="100%" height="100%" fill="#eef1f6"/><text x="50%" y="50%" fill="#9aa6b8" font-family="sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle">No image</text></svg>');
-const autoImage = (name) => 'https://picsum.photos/seed/' + encodeURIComponent((name || 'item').toLowerCase().replace(/\s+/g, '-')) + '/400/300';
+const slug = (name) => ((name || 'item').toLowerCase().trim().replace(/[^a-z0-9]+/g, ',').replace(/^,+|,+$/g, '') || 'item');
+const autoImage = (name) => {
+  const s = slug(name);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 100000;
+  return 'https://loremflickr.com/400/300/' + encodeURIComponent(s) + '?lock=' + h;
+};
 
 function toast(msg, kind) {
   const t = $('toast');
