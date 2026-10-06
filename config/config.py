@@ -9,6 +9,8 @@ class Config(BaseSettings):
     MYSQL_PORT: int = 3307
     MYSQL_DATABASE: str = "main"
 
+    CUSTOMER_SERVICE_BASE_URL: str = "http://localhost:8000"
+
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6380
     REDIS_TTL: int = 100

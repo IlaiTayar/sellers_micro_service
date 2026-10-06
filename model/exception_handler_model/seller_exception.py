@@ -1,0 +1,6 @@
+from enum import Enum
+
+
+class SellerException(Enum):
+    SELLER_NOT_FOUND = "SELLER NOT FOUND"
+    SELLER_HAS_REFERENCED_ITEMS = "SELLER HAS REFERENCED ITEMS"

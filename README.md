@@ -14,6 +14,10 @@ which looks up item prices and validates favorite items against this service.
 - CRUD for **items**, each belonging to a seller.
 - Lookup of an item by name returning the **lowest-priced** match (used by the customer
   service when pricing orders).
+- **Cross-service reference checks**: before deleting a seller or an item, the service asks
+  the customer service whether the item is still referenced by customer orders or favorites.
+  Deletion is blocked (`409`) while references exist. If the customer service is
+  unavailable the delete request fails with `503` so no unverified deletion happens.
 - **Redis** caching for item-by-id reads, with a configurable TTL.
 
 ## Tech stack
@@ -115,6 +119,10 @@ Interactive API docs are then available at `http://localhost:8001/docs`.
 | GET    | `/seller/get/all`       | List all sellers        |
 | DELETE | `/seller/{id}`          | Delete a seller by id   |
 
+> Deleting a seller cascades to its items, but is blocked with `409` if any of those items
+> are still referenced by customer orders or favorites (checked via the customer service).
+> The seller is notified in that case and nothing is deleted.
+
 ### Items (`/item`)
 
 | Method | Path                       | Description                               |
@@ -125,6 +133,10 @@ Interactive API docs are then available at `http://localhost:8001/docs`.
 | GET    | `/item/get-name-{name}`    | Get the lowest-priced item with that name |
 | GET    | `/item/get-all`            | List all items                            |
 | DELETE | `/item/delete-{id}`        | Delete an item by id                      |
+
+> Deleting an item is blocked with `409 ITEM_IN_USE` if it is still referenced by customer
+> orders or favorites. These reference checks call the customer service; if that service is
+> unavailable the request fails with `503`.
 
 ### Example
 

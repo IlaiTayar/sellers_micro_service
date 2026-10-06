@@ -96,6 +96,14 @@ async def get_all_items() -> List[Item]:
     return [_to_item(record) for record in records]
 
 
+async def get_items_by_seller_id(seller_id: int) -> List[Item]:
+    query = f"SELECT * FROM {TABLE_NAME} WHERE seller_id=:seller_id"
+
+    records: List[Record] = await database.fetch_all(query, values={"seller_id": seller_id})
+
+    return [_to_item(record) for record in records]
+
+
 async def delete_item_by_id(item_id: int) -> None:
     if cache_repository.is_key_exists(str(item_id)):
         cache_repository.remove_cache_entity(str(item_id))
