@@ -124,7 +124,7 @@ async function loadItems() {
     try {
       const sls = await api('/seller');
       sls.forEach(s => { nameById[s.seller_id] = (s.seller_name || '').trim(); });
-    } catch (e) {}
+    } catch (e) { toast('Could not load seller names: ' + e.message, 'err'); }
     if (itemScope === 'me') list = list.filter(it => it.seller_id === session.seller_id);
     $('itemsWrap').innerHTML = list.map(it => {
       const mine = it.seller_id === session.seller_id;
@@ -225,6 +225,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('iCreate').onclick = createItem;
   $('itemSearchBtn').onclick = searchItemByName;
   $('sellerSearchBtn').onclick = searchItemsBySeller;
+
+  document.querySelectorAll('input').forEach(input => input.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const button = input.closest('.inline, .form-row')?.querySelector('button');
+    if (button) button.click();
+  }));
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
   document.querySelectorAll('.authtab').forEach(t => t.onclick = () => switchAuth(t.dataset.auth));
   document.querySelectorAll('#sellerScope .seg').forEach(b => b.onclick = () => { sellerScope = b.dataset.scope; syncSeg('sellerScope', sellerScope); loadSellers(); });
