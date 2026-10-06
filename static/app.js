@@ -114,9 +114,7 @@ async function loadSellers() {
       const st = (s.status || '').toLowerCase();
       const idCell = reveal ? (s.seller_id + (mine ? ' <span class="badge me">me</span>' : '')) : '<span class="muted">hidden</span>';
       const emailCell = reveal ? esc(s.email) : '<span class="muted">hidden</span>';
-      const actions = isAdmin()
-        ? '<td><button class="btn secondary sm" onclick="editSeller(' + s.seller_id + ')">Edit</button> <button class="btn danger sm" onclick="deleteSeller(' + s.seller_id + ')">Delete</button></td>'
-        : '';
+      const actions = isAdmin() ? '<td><button class="btn secondary sm" onclick="editSeller(' + s.seller_id + ')">Edit</button> <button class="btn danger sm" onclick="deleteSeller(' + s.seller_id + ')">Delete</button></td>' : '';
       return '<tr><td>' + idCell + '</td><td>' + esc(s.seller_name) + '</td><td>' + emailCell + '</td><td><span class="badge ' + st + '">' + esc(s.status) + '</span></td>' + actions + '</tr>';
     }).join('') || '<tr><td colspan=4 class="empty">No sellers</td></tr>';
   } catch (e) { toast(e.message, 'err'); }
@@ -144,19 +142,31 @@ async function loadItems() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-async function searchItemById() {
-  const id = parseInt($('itemSearchId').value, 10);
-  if (!id) { toast('Enter an item id', 'err'); return; }
+async function searchItemByName() {
+  const name = $('itemSearchName').value.trim();
+  const seller = $('itemSearchSeller').value.trim();
+  if (!name) { toast('Enter an item name', 'err'); return; }
   try {
-    const item = await api('/item/' + id);
+    const query = '?item_name=' + encodeURIComponent(name) + (seller ? '&seller_name=' + encodeURIComponent(seller) : '');
+    const item = await api('/item/by-name' + query);
     renderSearchItems([item]);
-  } catch (e) { toast('Item lookup failed: ' + e.message, 'err'); }
+  } catch (e) { toast('Item search failed: ' + e.message, 'err'); }
+}
+
+async function searchItemsBySeller() {
+  const seller = $('sellerSearchName').value.trim();
+  if (!seller) { toast('Enter a seller name', 'err'); return; }
+  try {
+    renderSearchItems(await api('/item/by-seller-name?seller_name=' + encodeURIComponent(seller)));
+  } catch (e) { toast('Seller item search failed: ' + e.message, 'err'); }
 }
 
 function renderSearchItems(items) {
+  const nameById = {};
+  items.forEach(it => { nameById[it.seller_id] = $('sellerSearchName').value.trim() || ('Seller #' + it.seller_id); });
   $('itemSearchResults').innerHTML = (items || []).map(it => {
     const img = it.image_url || PLACEHOLDER;
-    return '<div class="item-card"><img src="' + esc(img) + '"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
+    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\'' + PLACEHOLDER + '\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · ' + esc(nameById[it.seller_id] || ('Seller #' + it.seller_id)) + '</div></div></div>';
   }).join('') || '<div class="empty">No matching items found.</div>';
 }
 
@@ -165,9 +175,7 @@ async function createItem() {
   const price = parseFloat($('iPrice').value);
   if (!item_name || isNaN(price)) { toast('Enter an item name and price', 'err'); return; }
   const image_url = $('iImage').value.trim() || null;
-  const seller_id = isAdmin() ? parseInt($('iSellerId').value, 10) : session.seller_id;
-  if (isAdmin() && !seller_id) { toast('Admin must enter the seller id for the new item', 'err'); return; }
-  try { await api('/item', 'POST', { seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; if ($('iSellerId')) $('iSellerId').value = ''; loadItems(); }
+  try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; if ($('iSellerId')) $('iSellerId').value = ''; loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 }
 
@@ -175,14 +183,11 @@ window.editSeller = async function (id) {
   if (!isAdmin()) return;
   const row = Array.from(document.querySelectorAll('#sellersBody tr')).find(r => r.textContent.includes(String(id)));
   const cells = row ? row.querySelectorAll('td') : [];
-  const currentName = cells[1] ? cells[1].textContent.trim() : '';
-  const currentEmail = cells[2] ? cells[2].textContent.trim() : '';
-  const currentStatus = cells[3] ? cells[3].textContent.trim() : 'active';
-  const seller_name = prompt('Seller name:', currentName);
+  const seller_name = prompt('Seller name:', cells[1] ? cells[1].textContent.trim() : '');
   if (seller_name == null || !seller_name.trim()) return;
-  const email = prompt('Email:', currentEmail);
+  const email = prompt('Email:', cells[2] ? cells[2].textContent.trim() : '');
   if (email == null || !email.trim()) return;
-  const status = prompt('Status (active/inactive):', currentStatus);
+  const status = prompt('Status (active/inactive):', cells[3] ? cells[3].textContent.trim() : 'active');
   if (status == null) return;
   try {
     await api('/seller/' + id, 'PUT', { seller_id: id, seller_name: seller_name.trim(), email: email.trim(), status: status.trim().toLowerCase() });
@@ -193,10 +198,7 @@ window.editSeller = async function (id) {
 
 window.deleteSeller = async function (id) {
   if (!isAdmin()) return;
-  if (id === session.seller_id) {
-    toast('Use your profile to delete your own account', 'err');
-    return;
-  }
+  if (id === session.seller_id) { toast('Use your profile to delete your own account', 'err'); return; }
   if (!confirm('Delete seller ' + id + '?')) return;
   try {
     await api('/seller/' + id, 'DELETE');
@@ -226,79 +228,6 @@ window.editItem = async function (id) {
     seller_id = parseInt(sellerIdStr, 10);
     if (!seller_id) { toast('Invalid seller id', 'err'); return; }
   }
-  try { await api('/item/' + id, 'PUT', { item_id: id, seller_id, item_name: item_name.trim(), price, image_url }); toast('Item updated', 'ok'); loadItems(); }
-  catch (e) { toast(e.message, 'err'); }
-};
-
-window.delItem = async function (id) {
-  if (!confirm('Delete item ' + id + '?')) return;
-  try { await api('/item/' + id, 'DELETE'); toast('Item deleted', 'ok'); loadItems(); }
-  catch (e) { toast(e.message, 'err'); }
-};
-
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-  $('tab-' + name).classList.remove('hidden');
-}
-
-function syncSeg(groupId, val) {
-  document.querySelectorAll('#' + groupId + ' .seg').forEach(b => b.classList.toggle('active', b.dataset.scope === val));
-}
-
-function switchAuth(name) {
-  document.querySelectorAll('.authtab').forEach(t => t.classList.toggle('active', t.dataset.auth === name));
-  $('authLogin').classList.toggle('hidden', name !== 'login');
-  $('authRegister').classList.toggle('hidden', name !== 'register');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  $('loginBtn').onclick = doLogin;
-  $('registerBtn').onclick = doRegister;
-  $('logoutBtn').onclick = logout;
-  $('pSave').onclick = saveProfile;
-  $('pDelete').onclick = deleteProfile;
-  $('iCreate').onclick = createItem;
-  $('itemSearchBtn').onclick = searchItemById;
-  $('sellerSearchBtn').onclick = searchItemsBySeller;
-
-  document.querySelectorAll('input').forEach(input => input.addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    const button = input.closest('.inline, .form-row')?.querySelector('button');
-    if (button) button.click();
-  }));
-  document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
-  document.querySelectorAll('.authtab').forEach(t => t.onclick = () => switchAuth(t.dataset.auth));
-  document.querySelectorAll('#sellerScope .seg').forEach(b => b.onclick = () => { sellerScope = b.dataset.scope; syncSeg('sellerScope', sellerScope); loadSellers(); });
-  document.querySelectorAll('#itemScope .seg').forEach(b => b.onclick = () => { itemScope = b.dataset.scope; syncSeg('itemScope', itemScope); loadItems(); });
-});
- + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
-  }).join('') || '<div class="empty">No matching items found.</div>';
-}
-
-async function createItem() {
-  const item_name = $('iName').value.trim();
-  const price = parseFloat($('iPrice').value);
-  if (!item_name || isNaN(price)) { toast('Enter an item name and price', 'err'); return; }
-  const image_url = $('iImage').value.trim() || null;
-  try { await api('/item', 'POST', { seller_id: session.seller_id, item_name, price, image_url }); toast('Item added', 'ok'); $('iName').value = ''; $('iPrice').value = ''; $('iImage').value = ''; loadItems(); }
-  catch (e) { toast(e.message, 'err'); }
-}
-
-window.editItem = async function (id) {
-  const card = document.querySelector('.item-card[data-id="' + id + '"]');
-  const curName = card ? card.dataset.name : '';
-  const curPrice = card ? card.dataset.price : '';
-  const curImg = card ? card.dataset.img : '';
-  const owner = card ? parseInt(card.dataset.owner, 10) : session.seller_id;
-  const item_name = prompt('Item name:', curName);
-  if (item_name == null || !item_name.trim()) return;
-  const priceStr = prompt('Price:', curPrice);
-  if (priceStr == null) return;
-  const price = parseFloat(priceStr);
-  if (isNaN(price)) { toast('Invalid price', 'err'); return; }
-  const image_url = prompt('Image URL (blank = no image):', curImg) || null;
-  const seller_id = isAdmin() ? owner : session.seller_id;
   try { await api('/item/' + id, 'PUT', { item_id: id, seller_id, item_name: item_name.trim(), price, image_url }); toast('Item updated', 'ok'); loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 };
