@@ -87,7 +87,15 @@
           <div class="field"><label>Image URL (optional)</label><input id="iImage" placeholder="leave blank for auto"/></div>
           <button id="iCreate" class="btn">Add item</button>
         </div>
-        <p class="hint">New items are listed under your seller id. If you leave the image blank, a copyright-free placeholder photo is generated from the item name. You can only edit or delete your own items (admins can edit any).</p>
+        <p class="hint">New items are listed under your seller id. If you leave the image blank, the UI uses a local placeholder. You can only edit or delete your own items (admins can edit any).</p>
+        <div class="inline">
+          <div class="field"><label>Find item by name</label><input id="itemSearchName" placeholder="Keyboard"/></div>
+          <div class="field"><label>Seller name (optional)</label><input id="itemSearchSeller" placeholder="TechStore"/></div>
+          <button id="itemSearchBtn" class="btn secondary">Search item</button>
+          <div class="field"><label>All items from seller</label><input id="sellerSearchName" placeholder="TechStore"/></div>
+          <button id="sellerSearchBtn" class="btn secondary">Search seller</button>
+        </div>
+        <div id="itemSearchResults" class="items"></div>
         <div id="itemsWrap" class="items"></div>
       </section>
     </div>
