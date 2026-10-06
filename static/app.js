@@ -156,7 +156,9 @@ async function searchItemById() {
 function renderSearchItems(items) {
   $('itemSearchResults').innerHTML = (items || []).map(it => {
     const img = it.image_url || PLACEHOLDER;
-    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\'' + PLACEHOLDER + '\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">
+    return '<div class="item-card"><img src="' + esc(img) + '" onerror="this.src=\\'' + PLACEHOLDER + '\\'"/><div class="body"><div class="name">' + esc(it.item_name) + '</div><div class="price">$' + esc(it.price) + '</div><div class="meta">Item #' + esc(it.item_id) + ' · Seller #' + esc(it.seller_id) + '</div></div></div>';
+  }).join('') || '<div class="empty">No matching items found.</div>';
+}
 
 async function createItem() {
   const item_name = $('iName').value.trim();
@@ -217,7 +219,13 @@ window.editItem = async function (id) {
   const price = parseFloat(priceStr);
   if (isNaN(price)) { toast('Invalid price', 'err'); return; }
   const image_url = prompt('Image URL (blank = no image):', curImg) || null;
-  const seller_id = isAdmin() ? owner : session.seller_id;
+  let seller_id = session.seller_id;
+  if (isAdmin()) {
+    const sellerIdStr = prompt('Seller id:', String(owner));
+    if (sellerIdStr == null) return;
+    seller_id = parseInt(sellerIdStr, 10);
+    if (!seller_id) { toast('Invalid seller id', 'err'); return; }
+  }
   try { await api('/item/' + id, 'PUT', { item_id: id, seller_id, item_name: item_name.trim(), price, image_url }); toast('Item updated', 'ok'); loadItems(); }
   catch (e) { toast(e.message, 'err'); }
 };
