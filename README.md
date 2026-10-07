@@ -70,7 +70,6 @@ All settings have defaults and can be overridden with environment variables
 | `MYSQL_PORT`     | `3307`       | MySQL port           |
 | `MYSQL_DATABASE` | `main`       | Database name        |
 | `CUSTOMER_SERVICE_BASE_URL` | `http://localhost:8000` | Base URL of the customer service |
-| `INTERNAL_API_KEY` | `internal-shared-key` | Shared key sent to the customer service's internal `/references` endpoints |
 | `REDIS_HOST`     | `localhost`  | Redis host           |
 | `REDIS_PORT`     | `6380`       | Redis port           |
 | `REDIS_TTL`      | `100`        | Cache TTL in seconds |
@@ -138,7 +137,6 @@ Interactive API docs are then available at `http://localhost:8001/docs`.
 
 > Deleting an item is blocked with `409 ITEM_IN_USE` if it is still referenced by customer
 > orders or favorites. These reference checks call the customer service's internal
-> `/references` endpoints with the shared `X-Internal-Api-Key` header; if that service is
 > unavailable the request fails with `503`.
 
 ### Example

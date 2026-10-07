@@ -10,9 +10,6 @@ class Config(BaseSettings):
     MYSQL_DATABASE: str = "main"
 
     CUSTOMER_SERVICE_BASE_URL: str = "http://localhost:8000"
-    INTERNAL_API_KEY: str = "internal-shared-key"
-    AUTH_SECRET: str = "dev-seller-auth-secret-change-me"
-    AUTH_TOKEN_TTL_MINUTES: int = 120
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6380
