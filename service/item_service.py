@@ -32,26 +32,6 @@ async def get_all_items() -> List[Item]:
     return await item_repository.get_all_items()
 
 
-async def get_item_by_name(
-    item_name: str,
-    seller_name: Optional[str] = None
-) -> Union[Item, ItemException]:
-    seller_id: Optional[int] = None
-
-    if seller_name is not None:
-        seller = await seller_repository.get_seller_by_name(seller_name)
-        if seller is None:
-            return ItemException.ITEM_NOT_FOUND
-
-        seller_id = seller.seller_id
-
-    item = await item_repository.get_item_by_name(item_name, seller_id)
-    if item is None:
-        return ItemException.ITEM_NOT_FOUND
-
-    return item
-
-
 async def delete_item_by_id(item_id: int) -> Union[str, ItemException]:
     existing_item = await get_item_by_id(item_id)
     if isinstance(existing_item, ItemException):
