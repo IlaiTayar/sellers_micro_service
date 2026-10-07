@@ -39,7 +39,7 @@ async def update_item_by_id(item_id: int, item: Item) -> None:
         UPDATE {TABLE_NAME}
         SET seller_id = :seller_id,
             item_name = :item_name,
-            price = :price,
+            price = :price
         WHERE item_id = :item_id
     """
 
@@ -74,6 +74,22 @@ async def get_item_by_id(item_id: int) -> Optional[Item]:
         return item
 
     return None
+
+
+async def get_item_by_name(item_name: str) -> Optional[Item]:
+    query = f"""
+        SELECT * FROM {TABLE_NAME}
+        WHERE item_name = :item_name
+        ORDER BY price ASC
+        LIMIT 1
+    """
+
+    record: Optional[Record] = await database.fetch_one(
+        query,
+        values={"item_name": item_name}
+    )
+
+    return _to_item(record) if record else None
 
 
 async def get_all_items() -> List[Item]:
